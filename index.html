@@ -1,0 +1,506 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard Guitar Tuner</title>
+    <!-- Include Plotly.js from CDN -->
+    <script src="https://cdn.plot.ly/plotly-2.24.1.min.js"></script>
+    <style>
+        :root {
+            --bg-color: #0f172a;
+            --card-bg: #1e293b;
+            --text-main: #f8fafc;
+            --text-muted: #94a3b8;
+            --accent: #3b82f6;
+            --accent-hover: #2563eb;
+            --stop-btn: #ef4444;
+            --stop-btn-hover: #dc2626;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+        }
+
+        .dashboard {
+            background-color: var(--card-bg);
+            border-radius: 16px;
+            padding: 24px;
+            width: 100%;
+            max-width: 800px;
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.3), 0 8px 10px -6px rgba(0, 0, 0, 0.3);
+        }
+
+        h2 {
+            margin-top: 0;
+            font-size: 24px;
+            font-weight: 600;
+            letter-spacing: -0.025em;
+            border-bottom: 1px solid #334155;
+            padding-bottom: 12px;
+        }
+
+        .control-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 24px;
+            margin-bottom: 24px;
+        }
+
+        @media (max-width: 600px) {
+            .control-grid { grid-template-columns: 1fr; }
+        }
+
+        .panel {
+            background-color: rgba(15, 23, 42, 0.4);
+            padding: 16px;
+            border-radius: 12px;
+            border: 1px solid #334155;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+        }
+
+        .panel-title {
+            font-size: 14px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: var(--text-muted);
+            margin-bottom: 12px;
+        }
+
+        .radio-group {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            margin-bottom: 16px;
+        }
+
+        .radio-label {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            cursor: pointer;
+            padding: 8px 12px;
+            background-color: #1e293b;
+            border-radius: 8px;
+            border: 1px solid transparent;
+            transition: all 0.2s ease;
+        }
+
+        .radio-label:hover {
+            border-color: #475569;
+        }
+
+        .radio-label input {
+            accent-color: var(--accent);
+            width: 16px;
+            height: 16px;
+        }
+
+        .volume-container {
+            margin-top: auto;
+            background-color: #1e293b;
+            padding: 12px;
+            border-radius: 8px;
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .volume-header {
+            display: flex;
+            justify-content: space-between;
+            font-size: 12px;
+            color: var(--text-muted);
+            font-weight: 600;
+        }
+
+        .volume-slider {
+            width: 100%;
+            accent-color: var(--accent);
+            cursor: pointer;
+            height: 6px;
+            border-radius: 3px;
+            background: #475569;
+            outline: none;
+            box-sizing: border-box;
+        }
+
+        .string-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 8px;
+        }
+
+        .string-label {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 12px;
+            background-color: #1e293b;
+            border-radius: 8px;
+            cursor: pointer;
+            border: 1px solid transparent;
+            transition: all 0.2s ease;
+        }
+
+        .string-label input {
+            display: none;
+        }
+
+        .string-label:hover {
+            border-color: #475569;
+        }
+
+        .string-label.active {
+            background-color: rgba(59, 130, 246, 0.15);
+            border-color: var(--accent);
+        }
+
+        .string-name {
+            font-size: 18px;
+            font-weight: bold;
+        }
+
+        .string-freq {
+            font-size: 12px;
+            color: var(--text-muted);
+            margin-top: 2px;
+        }
+
+        .action-buttons {
+            display: flex;
+            gap: 12px;
+            margin-top: 16px;
+        }
+
+        .btn {
+            flex: 1;
+            padding: 14px;
+            font-size: 16px;
+            font-weight: 600;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: background-color 0.15s ease;
+        }
+
+        .btn-play {
+            background-color: var(--accent);
+            color: white;
+        }
+
+        .btn-play:hover { background-color: var(--accent-hover); }
+
+        .btn-stop {
+            background-color: var(--stop-btn);
+            color: white;
+        }
+
+        .btn-stop:hover { background-color: var(--stop-btn-hover); }
+
+        #plot-container {
+            width: 100%;
+            height: 250px;
+            background-color: rgba(15, 23, 42, 0.4);
+            border-radius: 12px;
+            border: 1px solid #334155;
+            overflow: hidden;
+        }
+    </style>
+</head>
+<body>
+
+<div class="dashboard">
+    <h2>Guitar Tuner Dashboard</h2>
+    
+    <div class="control-grid">
+        <!-- Tone Type & Volume Selector -->
+        <div class="panel">
+            <div>
+                <div class="panel-title">Tone Type</div>
+                <div class="radio-group">
+                    <label class="radio-label">
+                        <input type="radio" name="toneType" value="sine" checked onchange="handleToneTypeChange()">
+                        <span>Harmonics (4x Sine Wave)</span>
+                    </label>
+                    <label class="radio-label">
+                        <input type="radio" name="toneType" value="guitar" onchange="handleToneTypeChange()">
+                        <span>Guitar Tone (1x Fundamental)</span>
+                    </label>
+                </div>
+            </div>
+
+            <!-- Volume Control Area -->
+            <div class="volume-container">
+                <div class="volume-header">
+                    <span>Volume</span>
+                    <span id="volume-val">50%</span>
+                </div>
+                <input type="range" class="volume-slider" id="volume" min="0" max="100" value="50" oninput="handleVolumeChange(this.value)">
+            </div>
+            
+            <div class="action-buttons">
+                <button class="btn btn-play" onclick="startAudio()">Play</button>
+                <button class="btn btn-stop" onclick="stopAudio()">Stop</button>
+            </div>
+        </div>
+
+        <!-- 6 Strings Selector -->
+        <div class="panel">
+            <div>
+                <div class="panel-title">String Select</div>
+                <div class="string-grid" id="string-grid">
+                    <label class="string-label active" data-base-freq="82.41">
+                        <input type="radio" name="guitarString" value="82.41" checked onchange="handleStringChange(this)">
+                        <span class="string-name">E2</span>
+                        <span class="string-freq">329.64 Hz</span>
+                    </label>
+                    <label class="string-label" data-base-freq="110.00">
+                        <input type="radio" name="guitarString" value="110.00" onchange="handleStringChange(this)">
+                        <span class="string-name">A2</span>
+                        <span class="string-freq">440.00 Hz</span>
+                    </label>
+                    <!-- FIXED: D3 now targets handleStringChange correctly -->
+                    <label class="string-label" data-base-freq="146.83">
+                        <input type="radio" name="guitarString" value="146.83" onchange="handleStringChange(this)">
+                        <span class="string-name">D3</span>
+                        <span class="string-freq">587.32 Hz</span>
+                    </label>
+                    <label class="string-label" data-base-freq="196.00">
+                        <input type="radio" name="guitarString" value="196.00" onchange="handleStringChange(this)">
+                        <span class="string-name">G3</span>
+                        <span class="string-freq">784.00 Hz</span>
+                    </label>
+                    <label class="string-label" data-base-freq="246.94">
+                        <input type="radio" name="guitarString" value="246.94" onchange="handleStringChange(this)">
+                        <span class="string-name">B3</span>
+                        <span class="string-freq">987.76 Hz</span>
+                    </label>
+                    <label class="string-label" data-base-freq="329.63">
+                        <input type="radio" name="guitarString" value="329.63" onchange="handleStringChange(this)">
+                        <span class="string-name">E4</span>
+                        <span class="string-freq">1318.52 Hz</span>
+                    </label>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Plotly Waveform Visualization Zone -->
+    <div class="panel-title" style="margin-bottom: 6px;">Waveform Monitor</div>
+    <div id="plot-container"></div>
+</div>
+
+<script>
+    // --- Audio State Variables ---
+    let audioCtx = null;
+    let oscillator = null;
+    let gainNode = null;
+    let filterNode = null;
+    let isPlaying = false;
+
+    // --- Core Interaction State Handles ---
+    function getSelectedBaseFrequency() {
+        return parseFloat(document.querySelector('input[name="guitarString"]:checked').value);
+    }
+
+    function getSelectedToneType() {
+        return document.querySelector('input[name="toneType"]:checked').value;
+    }
+
+    function getVolumeSetting() {
+        const sliderVal = parseFloat(document.getElementById('volume').value);
+        return (sliderVal / 100) * 0.6; 
+    }
+
+    function handleStringChange(radioInput) {
+        document.querySelectorAll('.string-label').forEach(label => label.classList.remove('active'));
+        radioInput.parentElement.classList.add('active');
+        
+        updateAudioAndPlot();
+    }
+
+    function handleToneTypeChange() {
+        updateLabelFrequencies();
+        updateAudioAndPlot();
+    }
+
+    function updateLabelFrequencies() {
+        const toneType = getSelectedToneType();
+        document.querySelectorAll('.string-label').forEach(label => {
+            const baseFreq = parseFloat(label.getAttribute('data-base-freq'));
+            // Restored 4x calculation multiplier for display views
+            const targetFreqText = toneType === 'sine' ? (baseFreq * 4).toFixed(2) : baseFreq.toFixed(2);
+            
+            const freqSpan = label.querySelector('.string-freq');
+            freqSpan.innerText = targetFreqText + ' Hz';
+        });
+    }
+
+    function handleVolumeChange(value) {
+        document.getElementById('volume-val').innerText = value + '%';
+        if (isPlaying && gainNode && audioCtx) {
+            gainNode.gain.setValueAtTime(getVolumeSetting(), audioCtx.currentTime);
+        }
+    }
+
+    // --- Web Audio Synthesizer Controls ---
+    function initAudio() {
+        if (!audioCtx) {
+            audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        }
+    }
+
+    function startAudio() {
+        initAudio();
+        if (isPlaying) return; 
+        
+        if (audioCtx.state === 'suspended') {
+            audioCtx.resume();
+        }
+
+        const baseFrequency = getSelectedBaseFrequency();
+        const toneType = getSelectedToneType();
+        const targetVolume = getVolumeSetting();
+
+        oscillator = audioCtx.createOscillator();
+        gainNode = audioCtx.createGain();
+        filterNode = audioCtx.createBiquadFilter();
+
+        if (toneType === 'sine') {
+            oscillator.type = 'sine';
+            // Audio output engine bumped back to 4x frequency bounds
+            oscillator.frequency.setValueAtTime(baseFrequency * 4, audioCtx.currentTime);
+            oscillator.connect(gainNode);
+        } else {
+            oscillator.type = 'sawtooth';
+            oscillator.frequency.setValueAtTime(baseFrequency, audioCtx.currentTime);
+            
+            filterNode.type = 'lowpass';
+            filterNode.frequency.setValueAtTime(baseFrequency * 2.5, audioCtx.currentTime); 
+            
+            oscillator.connect(filterNode);
+            filterNode.connect(gainNode);
+        }
+        
+        gainNode.gain.setValueAtTime(0, audioCtx.currentTime);
+        gainNode.gain.linearRampToValueAtTime(targetVolume, audioCtx.currentTime + 0.03);
+
+        gainNode.connect(audioCtx.destination);
+        oscillator.start();
+        isPlaying = true;
+        
+        renderWaveform();
+    }
+
+    function stopAudio() {
+        if (!isPlaying) return;
+        
+        if (gainNode && oscillator) {
+            try {
+                gainNode.gain.setValueAtTime(gainNode.gain.value, audioCtx.currentTime);
+                gainNode.gain.linearRampToValueAtTime(0, audioCtx.currentTime + 0.03);
+                oscillator.stop(audioCtx.currentTime + 0.04);
+            } catch(e) { console.log(e); }
+        }
+        isPlaying = false;
+        renderWaveform(); 
+    }
+
+    function updateAudioAndPlot() {
+        if (isPlaying) {
+            stopAudio();
+            startAudio();
+        } else {
+            renderWaveform();
+        }
+    }
+
+    // --- Plotly rendering calculations ---
+    function renderWaveform() {
+        const baseFreq = getSelectedBaseFrequency();
+        const toneType = getSelectedToneType();
+        
+        const xValues = [];
+        const yValues = [];
+        
+        const totalDuration = 0.03; 
+        const samples = 400;
+
+        const volSliderVal = parseFloat(document.getElementById('volume').value) / 100;
+        const visualAmplitude = volSliderVal === 0 ? 0 : 0.3 + (volSliderVal * 1.1);
+
+        for (let i = 0; i < samples; i++) {
+            const t = (i / samples) * totalDuration;
+            xValues.push(t * 1000); 
+            
+            if (!isPlaying) {
+                yValues.push(0); 
+            } else {
+                if (toneType === 'sine') {
+                    // Visual plot matches the 4x parameter calculations
+                    yValues.push(Math.sin(2 * Math.PI * (baseFreq * 4) * t) * (visualAmplitude * 0.8));
+                } else {
+                    let y = 0;
+                    for (let h = 1; h <= 5; h++) {
+                        const damping = 1 / h * Math.exp(-0.2 * h); 
+                        y += damping * Math.sin(2 * Math.PI * (baseFreq * h) * t);
+                    }
+                    yValues.push(y * visualAmplitude); 
+                }
+            }
+        }
+
+        const trace = {
+            x: xValues,
+            y: yValues,
+            type: 'scatter',
+            mode: 'lines',
+            line: {
+                color: isPlaying ? '#3b82f6' : '#475569',
+                width: 3,
+                shape: 'spline'
+            }
+        };
+
+        const layout = {
+            margin: { l: 40, r: 20, t: 15, b: 35 },
+            paper_bgcolor: 'rgba(0,0,0,0)',
+            plot_bgcolor: 'rgba(0,0,0,0)',
+            xaxis: {
+                title: { text: 'Time (ms)', font: { color: '#94a3b8', size: 11 } },
+                gridcolor: '#334155',
+                zerolinecolor: '#334155',
+                tickfont: { color: '#64748b' }
+            },
+            yaxis: {
+                range: [-1.8, 1.8],
+                gridcolor: '#334155',
+                zerolinecolor: '#475569',
+                tickfont: { color: '#64748b' }
+            }
+        };
+
+        const config = { responsive: true, displayModeBar: false };
+        Plotly.newPlot('plot-container', [trace], layout, config);
+    }
+
+    // Force setup initialization alignment on initial layout render 
+    updateLabelFrequencies();
+    renderWaveform();
+</script>
+
+</body>
+</html>
